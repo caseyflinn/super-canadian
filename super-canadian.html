@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<!-- Super Canadian — Created by Casey Flinn. © 2026 Casey Flinn. All rights reserved. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="author" content="Casey Flinn" />
+<meta name="copyright" content="© 2026 Casey Flinn" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Super Canadian — Sri's Citizenship Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0d16; --panel:#171a29; --ink:#f4f4f6; --gold:#f2c14e; --maple:#d63b2f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:'Press Start 2P',ui-monospace,monospace;}
+  #wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;}
+  #stage{position:relative;width:min(960px,100%);}
+  canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;
+    border:4px solid #2b2f45;border-radius:6px;background:#05060a;
+    box-shadow:0 0 0 4px #05060a,0 18px 40px rgba(0,0,0,.55);}
+  #hint{font-size:10px;line-height:1.8;color:#9aa0bf;text-align:center;max-width:920px;}
+  #hint b{color:var(--gold);}
+  /* on-screen controls for touch */
+  #dpad{position:absolute;left:10px;bottom:10px;display:grid;grid-template-columns:repeat(3,46px);
+    grid-template-rows:repeat(3,46px);gap:4px;opacity:.85;touch-action:none;}
+  #dpad button{font-family:inherit;font-size:14px;color:#fff;background:#2b2f45cc;border:2px solid #454b6e;
+    border-radius:8px;}
+  #dpad button:active{background:#d63b2f;}
+  #dpad .sp{visibility:hidden;}
+  .up{grid-column:2;grid-row:1;} .lf{grid-column:1;grid-row:2;}
+  .rt{grid-column:3;grid-row:2;} .dn{grid-column:2;grid-row:3;}
+  @media (hover:hover) and (pointer:fine){ #dpad{display:none;} }
+  #mute{position:absolute;left:83.33%;bottom:10.5%;transform:translateX(-50%);
+    font-family:inherit;font-size:9px;color:#fff;white-space:nowrap;
+    background:#2b2f45cc;border:2px solid #454b6e;border-radius:8px;padding:6px 9px;cursor:pointer;}
+  #config{position:absolute;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;
+    gap:7px;padding:10px 10px 12px;overflow:auto;background:linear-gradient(#0a0b14,#13162a);border-radius:6px;}
+  #config h2{font-size:11px;color:var(--gold);margin:2px 0 0;letter-spacing:1px;text-align:center;}
+  #config .top{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;}
+  #config #preview{width:64px;height:86px;image-rendering:pixelated;background:#05060a;border:2px solid #2b2f45;border-radius:5px;}
+  #config label{font-size:8px;color:#cfd6e0;display:block;margin-bottom:4px;letter-spacing:1px;text-align:center;}
+  #config input{font-family:inherit;font-size:10px;color:#fff;background:#1b1d2b;border:2px solid #454b6e;
+    border-radius:6px;padding:6px;width:120px;text-transform:uppercase;text-align:center;}
+  #config input:focus{outline:none;border-color:var(--gold);}
+  .pals{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;width:100%;}
+  .palwrap{flex:0 1 220px;max-width:220px;}
+  .pal{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;}
+  .sw{aspect-ratio:1;border-radius:4px;border:2px solid #0006;cursor:pointer;}
+  .sw.sel{border-color:#fff;box-shadow:0 0 0 2px var(--gold);}
+  #startBtn{margin-top:4px;font-family:inherit;font-size:10px;color:#0b0c16;background:var(--gold);
+    border:none;border-radius:8px;padding:9px 18px;cursor:pointer;}
+  #startBtn:active{transform:translateY(1px);}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="c" width="960" height="560"></canvas>
+    <button id="mute" aria-label="Toggle sound">SOUND: ON</button>
+    <div id="dpad" aria-hidden="true">
+      <button class="up" data-k="up">▲</button>
+      <button class="lf" data-k="left">◀</button>
+      <button class="sp"></button>
+      <button class="rt" data-k="right">▶</button>
+      <button class="dn" data-k="down">▼</button>
+    </div>
+    <div id="config">
+      <h2>CREATE YOUR CANADIAN</h2>
+      <div class="top">
+        <canvas id="preview" width="96" height="128"></canvas>
+        <div>
+          <label for="nameIn">NAME</label>
+          <input id="nameIn" maxlength="10" placeholder="YOUR NAME" autocomplete="off" />
+        </div>
+      </div>
+      <div class="pals">
+        <div class="palwrap"><label>SKIN</label><div id="skinPal" class="pal"></div></div>
+        <div class="palwrap"><label>HAIR</label><div id="hairPal" class="pal"></div></div>
+      </div>
+      <button id="startBtn">START QUEST</button>
+    </div>
+  </div>
+  <div id="hint">
+    <b>Arrows / WASD</b> to move &nbsp;•&nbsp; walk into a <b>door</b> to enter &nbsp;•&nbsp;
+    <b>walk over the glowing item</b> to grab it &nbsp;•&nbsp; collect all 5 to become <b>SUPER CANADIAN</b>
+    <div style="margin-top:8px;color:#6b7099;font-size:9px;">Created by Casey Flinn &nbsp;•&nbsp; © 2026 Casey Flinn</div>
+  </div>
+</div>
+<script>
+//==================================================================
+// SUPER CANADIAN — an 8-bit overworld quest for Sri's citizenship
+//==================================================================
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const W = 960, H = 560;          // logical canvas
+const VW = 640, VH = 560;        // game viewport (left); panel is the rest
+
+// ---------- palette ----------
+const COL = {
+  skin:'#a8703f', skinDk:'#84572f', hair:'#241a12', dark:'#16161f',
+  tee:'#2a6fb0', pants:'#2b2b3a', shoe:'#101019',
+  hatTan:'#c8a05a', hatBand:'#5a3a1f', hatBrim:'#8a6a3a',
+  flnRed:'#c0392b', flnDk:'#5e1714', flnHi:'#e15b4d',
+  cupW:'#f3efe7', cupR:'#b8202a', coffee:'#5b3a1f',
+  stickWood:'#c98a3a', stickBlade:'#15151d', tape:'#2a2a33',
+  parch:'#efe2bd', parchDk:'#c9b785', red:'#c0392b',
+  owl:'#b8c0c8', owlDk:'#525d6b', owlEye:'#f2c14e', white:'#fff',
+  grass:'#4a9a3a', grass2:'#418b32', path:'#caa86a', path2:'#bd9a5b',
+  tree:'#2f6b2a', treeDk:'#235221', trunk:'#5a3a1a',
+  water:'#3a78c0', water2:'#2f64a8',
+};
+
+// ---------- audio (tiny WebAudio bleeps) ----------
+let actx=null, muted=false;
+function ac(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return actx; }
+function beep(freq,dur,type='square',vol=0.06,delay=0){
+  if(muted) return; const a=ac(); if(!a) return;
+  const t=a.currentTime+delay; const o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  step(){ beep(180,0.05,'square',0.02); },
+  door(){ beep(330,0.08,'square',0.05); beep(220,0.10,'square',0.05,0.06); },
+  loot(){ [523,659,784,1047].forEach((f,i)=>beep(f,0.10,'square',0.06,i*0.07)); },
+  win(){ [523,587,659,784,880,1047,1318].forEach((f,i)=>beep(f,0.16,'square',0.07,i*0.13)); },
+  bad(){ beep(140,0.12,'sawtooth',0.05); },
+};
+// ---------- 8-bit "O Canada" (Lavallée, 1880 — public domain) ----------
+const NOTE={ 'G2':98.00,'C3':130.81,'G3':196.00,
+  'G4':392.00,'A4':440.00,'B4':493.88,'C5':523.25,'D5':587.33,'E5':659.25 };
+const TEMPO=98, BEAT=60/TEMPO;
+// opening strain: "O Ca-na-da, our home and na-tive land"
+const MELODY=[ ['G4',1],['C5',0.5],['C5',0.5],['E5',2],
+               ['D5',1],['C5',1],['B4',1],['A4',1],
+               ['G4',2],['rest',2] ];                 // 12 beats
+const BASS=[ ['C3',4],['G2',4],['C3',4] ];            // 12 beats
+let musicStarted=false, musicTimer=null;
+function tone(name,t,dur,type,vol){
+  const a=ac(); if(!a) return; const f=NOTE[name]; if(!f) return;
+  const o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.setValueAtTime(f,t);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur+0.04);
+}
+function playMusicLoop(){
+  if(muted||!musicStarted) return; const a=ac(); if(!a) return;
+  const t0=a.currentTime+0.06; let t=t0;
+  for(const [n,b] of MELODY){ const d=b*BEAT; if(n!=='rest') tone(n,t,d*0.9,'square',0.045); t+=d; }
+  t=t0; for(const [n,b] of BASS){ const d=b*BEAT; tone(n,t,d*0.95,'triangle',0.05); t+=d; }
+  musicTimer=setTimeout(playMusicLoop, 12*BEAT*1000 - 50);
+}
+function startMusic(){ if(musicStarted) return; musicStarted=true; playMusicLoop(); }
+function stopMusic(){ musicStarted=false; if(musicTimer){ clearTimeout(musicTimer); musicTimer=null; } }
+
+document.getElementById('mute').addEventListener('click',e=>{
+  muted=!muted; e.target.textContent='SOUND: '+(muted?'OFF':'ON');
+  if(muted){ stopMusic(); } else { ac(); if(state!==STATE.TITLE) startMusic(); }
+});
+
+// ---------- game data ----------
+// slots used: head, chest, lhand, rhand, owl
+const equipped = { head:false, chest:false, lhand:false, rhand:false, owl:false };
+const slotMeta = {
+  head:{label:'Mountie Hat', short:'MOUNTIE HAT'},
+  chest:{label:'Flannel Shirt', short:'FLANNEL SHIRT'},
+  lhand:{label:'Hockey Stick', short:'HOCKEY STICK'},
+  rhand:{label:'Writ of Free Healthcare', short:'FREE HEALTHCARE'},
+  owl:{label:'Drake-Fan Owl', short:'DRAKE-FAN OWL'},
+};
+
+// overworld buildings (coords inside the 640x560 viewport)
+const buildings = [
+  { id:'hockey', name:'HOCKEY SHOP', x:64, y:70,  w:140, h:104, slot:'lhand',
+    roof:'#b8202a', wall:'#e2e8f0', theme:'hockey' },
+  { id:'rcmp', name:'RCMP HQ',    x:436, y:70,  w:140, h:104, slot:'head',
+    roof:'#2a3a6a', wall:'#c8ccd6', theme:'police' },
+  { id:'lumber',name:'LUMBER CO.',x:64,  y:372, w:140, h:104, slot:'chest',
+    roof:'#5a3a1a', wall:'#9a6a36', theme:'wood' },
+  { id:'hosp', name:'HOSPITAL',   x:436, y:372, w:140, h:104, slot:'rhand',
+    roof:'#e6e8ee', wall:'#d6efe8', theme:'hospital' },
+  { id:'pet',  name:'PET STORE',  x:250, y:214, w:140, h:104, slot:'owl',
+    roof:'#2f8a4a', wall:'#d8e8c6', theme:'pet' },
+];
+const bySlot = id => buildings.find(b=>b.slot===id);
+
+// blockers (decoration with collision) in the overworld
+const blockers = [
+  {x:52,  y:236, w:74, h:54, type:'water'},
+  {x:206, y:120, w:54, h:54, type:'tree'},
+  {x:560, y:250, w:50, h:50, type:'tree'},
+];
+
+// ---------- state ----------
+const STATE = { TITLE:'title', CONFIG:'config', OVER:'over', INSIDE:'inside', CREDITS:'credits', ANNEX:'annex' };
+let state = STATE.TITLE;
+let current = null;       // building currently inside
+let creditsY = 0;
+const leaves = [];        // confetti maple leaves
+
+// ---- configurable character ----
+const cfg = { name:'', skin:'#a8703f', hair:'#241a12' };
+const PALETTE = [
+  '#ffffff','#c8c8d0','#7a8090','#2a2a33','#f4d9b0','#e8b07a','#a8703f','#6e4a2a',
+  '#ff4d4d','#ff7a3d','#ffd23d','#b6ff3d','#3dff7a','#3dffd2','#3dd2ff','#3d7aff',
+  '#7a3dff','#c83dff','#ff3dc8','#ff3d7a','#ff8fb0','#ffc8e0','#b88cff','#8ce0ff',
+  '#8cffb0','#e0ff8c','#ffe08c','#ffb88c','#5a3a1a','#241a12','#00e5ff','#39ff14',
+];
+
+// player as a feet box
+const player = { x:300, y:474, w:28, h:26, dir:'down', moving:false, bob:0, cool:0 };
+let itemHit = null;       // {x,y,w,h} of clickable item inside
+let toast = null;         // {text,t}
+let enterHint = null;
+
+// idle -> annexation
+let lastActivity = performance.now();
+let annexT0 = 0, babyX = -90;
+const plantedFlags = [];  // {b, t0}
+const FLY_MS = 3800;      // baby fly-across duration
+function activity(){ lastActivity = performance.now(); }
+function triggerAnnex(){
+  state = STATE.ANNEX; annexT0 = performance.now(); babyX = -90;
+  plantedFlags.length = 0; stopMusic(); sfx.bad();
+}
+function updateAnnex(){
+  const t = performance.now() - annexT0;
+  babyX = -90 + (Math.min(t,FLY_MS)/FLY_MS)*(VW+180);
+  for(const b of buildings){
+    if(babyX >= b.x+b.w/2 && !plantedFlags.some(f=>f.b===b)){
+      plantedFlags.push({ b, t0:performance.now() }); beep(120,0.10,'square',0.05);
+    }
+  }
+}
+
+// ---------- input ----------
+const keys = {};
+const KMAP = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right',
+};
+addEventListener('keydown', e=>{
+  if(e.target && (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
+  activity();
+  if(e.key===' '||e.key==='Enter'){ onAction(); e.preventDefault(); }
+  if(e.key==='r'||e.key==='R'){ if(state===STATE.CREDITS||state===STATE.ANNEX) restart(); }
+  if(e.key==='m'||e.key==='M'){ document.getElementById('mute').click(); }
+  const k=KMAP[e.key]; if(k){ keys[k]=true; e.preventDefault(); }
+});
+addEventListener('keyup', e=>{ const k=KMAP[e.key]; if(k) keys[k]=false; });
+// dpad
+document.querySelectorAll('#dpad button[data-k]').forEach(b=>{
+  const k=b.dataset.k;
+  const on=ev=>{ev.preventDefault(); keys[k]=true; ac(); activity();};
+  const off=ev=>{ev.preventDefault(); keys[k]=false;};
+  b.addEventListener('touchstart',on,{passive:false}); b.addEventListener('touchend',off,{passive:false});
+  b.addEventListener('mousedown',on); b.addEventListener('mouseup',off); b.addEventListener('mouseleave',off);
+});
+
+function onAction(){
+  ac(); startMusic(); activity();
+  if(state===STATE.TITLE){ showConfig(); }
+  else if(state===STATE.CREDITS){ restart(); }
+  else if(state===STATE.ANNEX){ restart(); }
+}
+
+// mouse / touch -> logical coords
+function logical(ev){
+  const r=cv.getBoundingClientRect();
+  const cx=(ev.touches?ev.touches[0].clientX:ev.clientX);
+  const cy=(ev.touches?ev.touches[0].clientY:ev.clientY);
+  return { x:(cx-r.left)*(cv.width/r.width), y:(cy-r.top)*(cv.height/r.height) };
+}
+let hover=null;
+cv.addEventListener('mousemove', ev=>{ cv.style.cursor='default'; });
+function tap(ev){
+  ac(); activity();
+  if(state===STATE.TITLE){ onAction(); return; }
+  if(state===STATE.CREDITS){ restart(); return; }
+  if(state===STATE.ANNEX){ restart(); return; }
+}
+cv.addEventListener('mousedown', tap);
+cv.addEventListener('touchstart', ev=>{ if(ev.target===cv){ ev.preventDefault(); tap(ev);} },{passive:false});
+
+function hit(p,r){ return p.x>=r.x && p.x<=r.x+r.w && p.y>=r.y && p.y<=r.y+r.h; }
+function rectsOverlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+function lootCurrent(){
+  if(!current || equipped[current.slot]) return;
+  equipped[current.slot]=true;
+  toast={ text:'EQUIPPED: '+slotMeta[current.slot].label, t:performance.now() };
+  sfx.loot();
+  if(Object.values(equipped).every(Boolean)){
+    setTimeout(()=>{ startCredits(); }, 700);
+  }
+}
+
+function startCredits(){
+  state=STATE.CREDITS; creditsY=VH+40; sfx.win();
+  leaves.length=0;
+  for(let i=0;i<46;i++) leaves.push(spawnLeaf(true));
+}
+function spawnLeaf(spread){
+  return { x:Math.random()*W, y:spread?Math.random()*H:-20,
+    vy:0.5+Math.random()*1.4, vx:(Math.random()-0.5)*0.8,
+    s:6+Math.random()*7, rot:Math.random()*Math.PI*2, vr:(Math.random()-0.5)*0.08 };
+}
+function restart(){
+  for(const k in equipped) equipped[k]=false;
+  player.x=300; player.y=474; player.cool=20;
+  state=STATE.OVER; current=null; toast=null;
+  plantedFlags.length=0; activity();
+  if(!muted){ startMusic(); }
+}
+
+//==================================================================
+// PIXEL AVATAR
+//==================================================================
+function drawAvatar(g, ox, oy, p, eq, opt){
+  opt=opt||{};
+  const bob = opt.bob||0;
+  oy += bob;
+  const R=(c,r,wc,hc,color)=>{ g.fillStyle=color; g.fillRect(ox+c*p, oy+r*p, wc*p, hc*p); };
+
+  // ---- base body ----
+  if(!eq.head){ R(4,0,4,2,cfg.hair); }              // hair (hidden by hat)
+  R(4,2,4,3,cfg.skin);                              // face
+  R(5,3,1,1,COL.dark); R(6,3,1,1,COL.dark);         // eyes
+  R(5,5,2,1,cfg.skin);                              // neck
+  // torso + arms (base tee, covered by flannel)
+  R(4,6,4,3, eq.chest?COL.flnRed:COL.tee);
+  R(3,6,1,3, eq.chest?COL.flnRed:COL.tee);
+  R(8,6,1,3, eq.chest?COL.flnRed:COL.tee);
+  // flannel plaid
+  if(eq.chest){
+    R(5,6,1,3,COL.flnDk); R(7,6,1,3,COL.flnDk);
+    R(3,7,6,1,COL.flnDk);
+    R(4,6,1,1,COL.flnHi);
+  }
+  // hands
+  R(3,9,1,1,cfg.skin); R(8,9,1,1,cfg.skin);
+  // waist + legs
+  R(4,9,4,1,COL.pants);
+  R(4,10,2,4,COL.pants); R(6,10,2,4,COL.pants);
+  R(5,10,1,4, '#23232f');                            // leg seam
+  // feet
+  R(4,14,2,2,COL.shoe); R(6,14,2,2,COL.shoe);
+
+  // ---- equipment ----
+  if(eq.head){ // mountie stetson
+    R(4,-1,4,2,COL.hatTan);
+    R(4,0,4,1,COL.hatBand);
+    R(2,1,8,1,COL.hatBrim);
+    R(5,-1,2,1,'#dab97a');
+  }
+  if(eq.lhand){ // hockey stick held at the side
+    R(2,6,1,7,COL.stickWood);   // shaft
+    R(2,6,1,1,COL.tape);        // taped knob
+    R(0,12,3,1,COL.stickBlade); // blade
+    R(0,12,1,1,COL.tape);       // toe tape
+  }
+  if(eq.rhand){ // writ of free healthcare (glowing scroll)
+    if(opt.glow){ g.fillStyle='rgba(120,220,255,.20)'; g.beginPath();
+      g.arc(ox+10*p, oy+8.5*p, 3.4*p, 0, Math.PI*2); g.fill(); }
+    R(9,7,2,3,COL.parch);
+    R(9,7,2,1,COL.parchDk); R(9,9,2,1,COL.parchDk);
+    R(9,8,2,1,COL.red);                 // maple band
+    R(9,8,1,1,'#fff');                  // sparkle
+  }
+  if(eq.owl){ // drake-fan owl perched on right shoulder
+    R(8,4,2,2,COL.owl);                 // body
+    R(8,4,1,1,COL.owlDk); R(9,4,1,1,COL.owlDk); // ear tufts
+    R(8,5,1,1,COL.owlEye); R(9,5,1,1,COL.owlEye); // big eyes
+    R(8,5,1,1,COL.dark); // pupil hint (overdraw center)
+    g.fillStyle=COL.dark; g.fillRect(ox+8.35*p, oy+5.35*p, p*0.3, p*0.3);
+    g.fillStyle=COL.dark; g.fillRect(ox+9.35*p, oy+5.35*p, p*0.3, p*0.3);
+  }
+}
+
+//==================================================================
+// ITEM ICONS (big, for inside rooms)
+//==================================================================
+function icon(g, kind, cx, cy, s){
+  const R=(dx,dy,w,h,color)=>{ g.fillStyle=color; g.fillRect(cx+dx*s, cy+dy*s, w*s, h*s); };
+  if(kind==='lhand'){ // hockey stick
+    R(0.5,-3,1,5,COL.stickWood);   // shaft
+    R(0.5,-3,1,1,COL.tape);        // taped knob
+    R(0.5,-1,1,1,COL.tape);        // mid tape
+    R(-2,2,3,1,COL.stickBlade);    // blade
+    R(-2,2,1,1,COL.tape);          // toe tape
+  } else if(kind==='head'){ // mountie hat
+    R(-1,-3,3,2,COL.hatTan);        // crown
+    R(-1,-2,3,1,COL.hatBand);
+    R(-3,-1,7,1,COL.hatBrim);       // wide brim
+    R(0,-3,1,1,'#dab97a');
+  } else if(kind==='chest'){ // flannel shirt
+    R(-3,-2,6,5,COL.flnRed);
+    R(-3,-2,2,5,COL.flnRed); R(2,-2,2,5,COL.flnRed); // sleeves
+    R(-1,-2,1,5,COL.flnDk); R(1,-2,1,5,COL.flnDk);   // plaid v
+    R(-3,0,7,1,COL.flnDk);                            // plaid h
+    R(-1,-2,1,1,COL.cupW);                            // collar gap
+  } else if(kind==='rhand'){ // writ / scroll
+    R(-2,-3,4,6,COL.parch);
+    R(-2,-3,4,1,COL.parchDk); R(-2,2,4,1,COL.parchDk);
+    R(-1,-1,2,1,COL.red);            // maple seal
+    R(-1,0,2,1,'#8a6a3a');           // line
+    R(-1,1,2,1,'#8a6a3a');
+  } else if(kind==='owl'){ // OVO-style owl
+    R(-2,-2,4,4,COL.owl);            // body
+    R(-2,-3,1,2,COL.owlDk); R(1,-3,1,2,COL.owlDk); // ear tufts
+    R(-2,-1,2,2,COL.owlEye); R(0,-1,2,2,COL.owlEye); // eyes
+    R(-1,0,1,1,COL.dark); R(1,0,1,1,COL.dark);       // pupils
+    R(-1,1,2,1,'#caa84a');           // beak
+    R(-2,1,1,1,'#9aa2ac'); R(1,1,1,1,'#9aa2ac');     // wings
+  }
+}
+
+//==================================================================
+// OVERWORLD
+//==================================================================
+function drawGrass(g){
+  for(let y=0;y<VH;y+=20) for(let x=0;x<VW;x+=20){
+    g.fillStyle = ((x/20+y/20)%2===0)?COL.grass:COL.grass2;
+    g.fillRect(x,y,20,20);
+  }
+  // tree border
+  for(let x=0;x<VW;x+=32){ tree(g,x+4,2); tree(g,x+4,VH-34); }
+  for(let y=32;y<VH-32;y+=32){ tree(g,2,y); tree(g,VW-34,y); }
+}
+function tree(g,x,y){
+  g.fillStyle=COL.trunk; g.fillRect(x+12,y+22,8,10);
+  g.fillStyle=COL.treeDk; g.fillRect(x+2,y+6,28,20);
+  g.fillStyle=COL.tree;  g.fillRect(x+4,y+2,24,18);
+  g.fillStyle='#3f8a36'; g.fillRect(x+8,y+5,8,6);
+}
+function drawPaths(g){
+  g.fillStyle=COL.path;
+  // a loop-ish path connecting buildings through the centre
+  const lanes=[
+    [134,174,372], // tim down
+    [506,174,372], // rcmp down
+    [134,300,476], // lumber up to centre row? keep simple
+  ];
+  // simple cross paths to the centre fountain
+  paint(g,118,170,34,360);   // left vertical
+  paint(g,490,170,34,360);   // right vertical
+  paint(g,118,300,420,34);   // horizontal mid
+  paint(g,304,316,34,170);   // centre to bottom (to start)
+  // dapple
+  g.fillStyle=COL.path2;
+  for(let i=0;i<60;i++){ /* subtle speckle */ }
+}
+function paint(g,x,y,w,h){ g.fillStyle=COL.path; g.fillRect(x,y,w,h);
+  g.fillStyle=COL.path2; for(let yy=y;yy<y+h;yy+=8) g.fillRect(x,yy,w,2); }
+
+function drawBlocker(g,b){
+  if(b.type==='water'){
+    g.fillStyle=COL.water2; g.fillRect(b.x-3,b.y-3,b.w+6,b.h+6);
+    g.fillStyle=COL.water;  g.fillRect(b.x,b.y,b.w,b.h);
+    g.fillStyle='#6aa0e0'; for(let i=0;i<3;i++) g.fillRect(b.x+8+i*18, b.y+10+((i%2)*14), 14,3);
+  } else { tree(g,b.x,b.y); tree(g,b.x+18,b.y+10); }
+}
+
+function drawBuildingExt(g,b){
+  // shadow
+  g.fillStyle='rgba(0,0,0,.20)'; g.fillRect(b.x+6,b.y+b.h-4,b.w,10);
+  // wall
+  g.fillStyle=b.wall; g.fillRect(b.x,b.y+24,b.w,b.h-24);
+  g.fillStyle='rgba(0,0,0,.10)'; g.fillRect(b.x,b.y+b.h-10,b.w,10);
+  // roof
+  g.fillStyle=b.roof; g.fillRect(b.x-6,b.y+10,b.w+12,18);
+  g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(b.x-6,b.y+10,b.w+12,4);
+  // gable
+  g.fillStyle=b.roof; g.beginPath();
+  g.moveTo(b.x-6,b.y+10); g.lineTo(b.x+b.w/2,b.y-8); g.lineTo(b.x+b.w+6,b.y+10); g.closePath(); g.fill();
+  // sign board
+  g.fillStyle='#1b1d2b'; g.fillRect(b.x+10,b.y+30,b.w-20,16);
+  g.fillStyle=COL.gold; g.font='8px "Press Start 2P",monospace'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(b.name, b.x+b.w/2, b.y+39);
+  // windows
+  g.fillStyle='#9fd0ff'; g.fillRect(b.x+18,b.y+54,20,18); g.fillRect(b.x+b.w-38,b.y+54,20,18);
+  g.fillStyle='#2b2f45'; g.fillRect(b.x+18,b.y+63,20,2); g.fillRect(b.x+27,b.y+54,2,18);
+  g.fillRect(b.x+b.w-38,b.y+63,20,2); g.fillRect(b.x+b.w-29,b.y+54,2,18);
+  // door
+  const dw=36;
+  g.fillStyle='#3a2718'; g.fillRect(b.x+b.w/2-dw/2, b.y+b.h-30, dw, 30);
+  g.fillStyle='#5a3a22'; g.fillRect(b.x+b.w/2-dw/2+4, b.y+b.h-26, dw-8, 26);
+  g.fillStyle=COL.gold; g.fillRect(b.x+b.w/2+8, b.y+b.h-16, 3,3);
+  // theme tag on wall
+  g.textBaseline='middle';
+  const tcx=b.x+b.w/2, tcy=b.y+60;
+  if(b.theme==='hockey'){ icon(g,'lhand', tcx, tcy, 1.7);
+    g.fillStyle='#101019'; g.beginPath(); g.arc(tcx+18,tcy+6,4,0,Math.PI*2); g.fill(); }
+  else if(b.theme==='police'){ // RCMP flag logo
+    g.fillStyle='#5a3a1a'; g.fillRect(tcx-15,tcy-13,3,32);          // pole
+    g.fillStyle='#16306b'; g.fillRect(tcx-12,tcy-13,30,20);         // navy banner
+    g.fillStyle='#2a4a8a'; g.fillRect(tcx-12,tcy-13,30,3);          // banner sheen
+    bigLeaf(g, tcx+3, tcy-2, 8, COL.gold);                          // gold maple
+  }
+  else if(b.theme==='hospital'){ g.fillStyle=COL.red;               // red cross
+    g.fillRect(tcx-3,tcy-9,6,18); g.fillRect(tcx-9,tcy-3,18,6); }
+  else if(b.theme==='wood'){ // pine tree
+    g.fillStyle=COL.trunk; g.fillRect(tcx-2,tcy+10,4,8);
+    g.fillStyle='#2f7a2c';
+    g.beginPath(); g.moveTo(tcx,tcy-15); g.lineTo(tcx-12,tcy+1); g.lineTo(tcx+12,tcy+1); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(tcx,tcy-6);  g.lineTo(tcx-14,tcy+12); g.lineTo(tcx+14,tcy+12); g.closePath(); g.fill();
+    g.fillStyle='#3f9a36'; g.beginPath(); g.moveTo(tcx,tcy-15); g.lineTo(tcx-5,tcy-6); g.lineTo(tcx+5,tcy-6); g.closePath(); g.fill();
+  }
+  else if(b.theme==='pet'){ // paw print
+    g.fillStyle='#4a3320';
+    g.beginPath(); g.ellipse(tcx,tcy+7,8,7,0,0,Math.PI*2); g.fill();          // pad
+    [[-9,-3],[-3,-9],[3,-9],[9,-3]].forEach(t=>{ g.beginPath();
+      g.arc(tcx+t[0],tcy+t[1],3.2,0,Math.PI*2); g.fill(); });                 // toes
+  }
+  // looted check
+  if(equipped[b.slot]){
+    g.fillStyle='#1b1d2b'; g.beginPath(); g.arc(b.x+b.w-14,b.y+2,12,0,Math.PI*2); g.fill();
+    g.strokeStyle='#39d353'; g.lineWidth=4; g.beginPath();
+    g.moveTo(b.x+b.w-20,b.y+2); g.lineTo(b.x+b.w-15,b.y+7); g.lineTo(b.x+b.w-8,b.y-4); g.stroke();
+  }
+}
+function doorRect(b){ const dw=40; return { x:b.x+b.w/2-dw/2, y:b.y+b.h-12, w:dw, h:22 }; }
+function bodyRect(b){ return { x:b.x-6, y:b.y-8, w:b.w+12, h:b.h+18 }; }
+
+function updateOver(){
+  // movement
+  let dx=0,dy=0;
+  if(keys.left)dx-=1; if(keys.right)dx+=1; if(keys.up)dy-=1; if(keys.down)dy+=1;
+  if(dx&&dy){ dx*=0.7071; dy*=0.7071; }
+  const spd=2.6;
+  player.moving = !!(dx||dy);
+  if(player.moving) activity();
+  if(dx<0)player.dir='left'; else if(dx>0)player.dir='right';
+  else if(dy<0)player.dir='up'; else if(dy>0)player.dir='down';
+
+  // try move with collision
+  tryMove(dx*spd, dy*spd, true);
+  if(player.cool>0) player.cool--;
+
+  // door check
+  enterHint=null;
+  const pr={x:player.x,y:player.y,w:player.w,h:player.h};
+  for(const b of buildings){
+    if(rectsOverlap(pr, doorRect(b))){
+      enterHint=b;
+      if(player.cool===0){ enterBuilding(b); break; }
+    }
+  }
+  // walk bob + step sfx
+  if(player.moving){ player.bob = (Math.sin(performance.now()/90)*1)|0; if((performance.now()|0)%18<2) sfx.step(); }
+  else player.bob=0;
+}
+function tryMove(mx,my,over){
+  const test=(nx,ny)=>{
+    const r={x:nx,y:ny,w:player.w,h:player.h};
+    // viewport bounds (inside tree border)
+    if(nx<34||ny<34||nx+player.w>VW-34||ny+player.h>VH-34) return false;
+    if(over){
+      for(const b of buildings){ if(rectsOverlap(r,bodyRect(b)) && !rectsOverlap(r,doorRect(b))) return false; }
+      for(const k of blockers){ if(rectsOverlap(r,k)) return false; }
+    } else {
+      // inside room bounds
+      if(nx<52||ny<86||nx+player.w>VW-52||ny+player.h>VH-44) return false;
+    }
+    return true;
+  };
+  if(mx && test(player.x+mx, player.y)) player.x+=mx;
+  if(my && test(player.x, player.y+my)) player.y+=my;
+}
+function enterBuilding(b){
+  current=b; state=STATE.INSIDE; player.cool=18; sfx.door();
+  player.x=VW/2-player.w/2; player.y=VH-110;
+}
+function exitBuilding(){
+  const b=current; state=STATE.OVER; current=null; player.cool=22; sfx.door();
+  player.x=b.x+b.w/2-player.w/2; player.y=b.y+b.h+14;
+}
+
+//==================================================================
+// INSIDE A ROOM
+//==================================================================
+function drawRoom(g,b){
+  // floor
+  let f1,f2;
+  switch(b.theme){
+    case 'hockey':   f1='#dfeaf5'; f2='#d2e2f0'; break;
+    case 'police':   f1='#3a4a6a'; f2='#33425e'; break;
+    case 'wood':     f1='#6a4a26'; f2='#5e4120'; break;
+    case 'hospital': f1='#d9efe9'; f2='#cfe7e0'; break;
+    case 'pet':      f1='#bcd6a4'; f2='#b0cc97'; break;
+    default: f1='#444'; f2='#3a3a3a';
+  }
+  for(let y=40;y<VH-40;y+=24) for(let x=40;x<VW-40;x+=24){
+    g.fillStyle=((x/24+y/24)%2===0)?f1:f2; g.fillRect(x,y,24,24);
+  }
+  // walls
+  g.fillStyle=b.roof; g.fillRect(36,36,VW-72,40);
+  g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(36,72,VW-72,6);
+  g.fillStyle='#1b1d2b'; g.fillRect(36,36,VW-72,40); // dark header
+  g.fillStyle=COL.gold; g.font='12px "Press Start 2P",monospace'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(b.name, VW/2, 57);
+  // side walls trim
+  g.fillStyle='rgba(0,0,0,.18)'; g.fillRect(36,76,8,VH-116); g.fillRect(VW-44,76,8,VH-116);
+
+  // exit door (bottom centre)
+  const ex=VW/2-30;
+  g.fillStyle='#3a2718'; g.fillRect(ex,VH-44,60,44);
+  g.fillStyle='#5a3a22'; g.fillRect(ex+5,VH-39,50,39);
+  g.fillStyle=COL.gold; g.font='8px "Press Start 2P",monospace';
+  g.fillText('EXIT', VW/2, VH-22);
+
+  // theme props
+  roomProps(g,b);
+}
+function roomProps(g,b){
+  const t=performance.now();
+  switch(b.theme){
+    case 'hockey':
+      // wall shelf / boards
+      g.fillStyle='#9a6a36'; g.fillRect(80,150,VW-160,40);
+      g.fillStyle='#b5824a'; g.fillRect(80,150,VW-160,8);
+      // team jersey on the wall
+      g.fillStyle='#11141f'; g.fillRect(VW/2-48,84,96,50);
+      g.fillStyle=COL.flnRed; g.fillRect(VW/2-42,88,84,42);
+      g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+      g.font='9px "Press Start 2P",monospace'; g.fillText(cfg.name.slice(0,6), VW/2, 104);
+      g.font='12px "Press Start 2P",monospace'; g.fillText('99', VW/2, 122);
+      // sticks on the shelf
+      icon(g,'lhand',150,150,1.5); icon(g,'lhand',182,150,1.5); icon(g,'lhand',VW-160,150,1.5);
+      // pucks on the ice
+      g.fillStyle='#101019';
+      [[250,176],[300,184],[360,178]].forEach(p=>{ g.beginPath(); g.arc(p[0],p[1],6,0,Math.PI*2); g.fill(); });
+      break;
+    case 'police':
+      // desk + flag
+      g.fillStyle='#2b3550'; g.fillRect(90,150,160,46);
+      g.fillStyle='#e9e9ef'; g.fillRect(VW-220,96,130,80); // flag white
+      g.fillStyle=COL.red; g.fillRect(VW-220,96,30,80); g.fillRect(VW-120,96,30,80);
+      g.fillStyle=COL.red; g.fillRect(VW-165,118,20,18); // leaf-ish
+      break;
+    case 'wood':
+      // log stack
+      for(let i=0;i<4;i++){ g.fillStyle='#7a5126'; g.beginPath();
+        g.arc(120+i*34,170,16,0,Math.PI*2); g.fill();
+        g.fillStyle='#a87a40'; g.beginPath(); g.arc(120+i*34,170,9,0,Math.PI*2); g.fill(); }
+      // axe on wall
+      g.fillStyle='#8a6a3a'; g.fillRect(VW-150,96,6,60);
+      g.fillStyle='#c8ccd6'; g.fillRect(VW-168,96,30,18);
+      break;
+    case 'hospital':
+      // bed
+      g.fillStyle='#ffffff'; g.fillRect(96,150,150,48);
+      g.fillStyle='#bfe3ff'; g.fillRect(96,150,40,48);
+      g.fillStyle='#cfd6e0'; g.fillRect(96,196,150,8);
+      // red cross
+      g.fillStyle=COL.red; g.fillRect(VW-160,100,10,40); g.fillRect(VW-175,115,40,10);
+      break;
+    case 'pet':
+      // cages
+      for(let i=0;i<3;i++){ g.fillStyle='#9a7a4a'; g.fillRect(96+i*120,150,90,56);
+        g.fillStyle='#d8e8c6'; g.fillRect(100+i*120,154,82,48);
+        g.strokeStyle='#6a4a2c'; g.lineWidth=2;
+        for(let bxs=0;bxs<6;bxs++){ g.beginPath(); g.moveTo(100+i*120+bxs*14,154); g.lineTo(100+i*120+bxs*14,202); g.stroke(); } }
+      // a couple of critters
+      icon(g,'owl',300,178,1.0);
+      break;
+  }
+}
+function drawItemInside(g,b){
+  const slot=b.slot;
+  const cx=VW/2, cy=300;
+  // pedestal
+  g.fillStyle='rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(cx,cy+44,46,12,0,0,Math.PI*2); g.fill();
+  g.fillStyle='#2b2f45'; g.fillRect(cx-30,cy+24,60,18);
+  g.fillStyle='#3a3f5e'; g.fillRect(cx-34,cy+18,68,8);
+
+  if(equipped[slot]){
+    g.fillStyle=COL.gold; g.font='8px "Press Start 2P",monospace'; g.textAlign='center';
+    g.fillText('LOOTED!', cx, cy-46);
+    itemHit=null;
+    return;
+  }
+  const t=performance.now();
+  const bob=Math.sin(t/300)*6;
+  // glow halo
+  const pulse=0.5+0.5*Math.sin(t/260);
+  g.fillStyle='rgba(242,193,78,'+(0.12+0.12*pulse)+')';
+  g.beginPath(); g.arc(cx, cy+bob, 42+6*pulse, 0, Math.PI*2); g.fill();
+  // hover ring removed — looting is by walking over the item
+  icon(g, slot, cx, cy+bob, 5);
+
+  // sparkles
+  for(let i=0;i<3;i++){ const a=t/500+i*2.1;
+    const sx=cx+Math.cos(a)*34, sy=cy+bob+Math.sin(a)*30;
+    g.fillStyle='#fff'; g.fillRect(sx-2,sy,4,1); g.fillRect(sx,sy-2,1,4); }
+
+  // label + prompt
+  g.fillStyle=COL.white; g.font='9px "Press Start 2P",monospace'; g.textAlign='center';
+  g.fillText(slotMeta[slot].label.toUpperCase(), cx, cy-48);
+  g.fillStyle='#9aa0bf'; g.font='8px "Press Start 2P",monospace';
+  g.fillText('WALK OVER TO GRAB', cx, cy+72);
+
+  itemHit={ x:cx-44, y:cy-44, w:88, h:96 };
+}
+
+function updateInside(){
+  let dx=0,dy=0;
+  if(keys.left)dx-=1; if(keys.right)dx+=1; if(keys.up)dy-=1; if(keys.down)dy+=1;
+  if(dx&&dy){ dx*=0.7071; dy*=0.7071; }
+  player.moving=!!(dx||dy);
+  if(player.moving) activity();
+  tryMove(dx*2.4, dy*2.4, false);
+  if(player.cool>0) player.cool--;
+  player.bob = player.moving ? ((Math.sin(performance.now()/90)*1)|0) : 0;
+  // auto-grab when standing on the item
+  if(current && !equipped[current.slot]){
+    const zone={ x:VW/2-54, y:246, w:108, h:124 };
+    if(rectsOverlap({x:player.x,y:player.y,w:player.w,h:player.h}, zone)) lootCurrent();
+  }
+  // exit if on door
+  const ex=VW/2-30;
+  const exitR={x:ex,y:VH-54,w:60,h:54};
+  if(player.cool===0 && rectsOverlap({x:player.x,y:player.y,w:player.w,h:player.h}, exitR)){
+    exitBuilding();
+  }
+}
+
+//==================================================================
+// PANEL (paperdoll + checklist)  — right side of canvas
+//==================================================================
+function drawPanel(g){
+  const px=VW, pw=W-VW;
+  g.fillStyle='#12141f'; g.fillRect(px,0,pw,H);
+  g.fillStyle='#0a0b12'; g.fillRect(px,0,6,H);
+  // title
+  g.textAlign='center'; g.textBaseline='top';
+  g.font='18px "Press Start 2P",monospace';
+  g.fillStyle='#3a0d0a'; g.fillText(cfg.name, px+pw/2+2, 18);   // shadow
+  g.fillStyle='#ffffff'; g.fillText(cfg.name, px+pw/2, 16);     // bright fill
+  g.fillStyle=COL.gold; g.font='bold 11px "Courier New",ui-monospace,monospace';
+  g.fillText('CANADIAN IN PROGRESS', px+pw/2, 40);
+
+  // paperdoll frame
+  const fx=px+pw/2-86, fy=64, fw=172, fh=210;
+  g.fillStyle='#0c0d16'; g.fillRect(fx,fy,fw,fh);
+  g.strokeStyle='#2b2f45'; g.lineWidth=3; g.strokeRect(fx,fy,fw,fh);
+  // platform
+  g.fillStyle='#1b1d2b'; g.fillRect(fx+18,fy+fh-22,fw-36,12);
+  // avatar centred (p=8 => 96x~136)
+  const p=8;
+  const ax = px+pw/2 - (12*p)/2;
+  const ay = fy+44;
+  drawAvatar(g, ax, ay, p, equipped, {glow:true});
+
+  // count
+  const n=Object.values(equipped).filter(Boolean).length;
+  g.fillStyle=COL.white; g.font='bold 15px "Courier New",ui-monospace,monospace'; g.textAlign='center';
+  g.fillText('GEAR  '+n+' / 5', px+pw/2, fy+fh+14);
+
+  // checklist
+  const order=['head','chest','lhand','rhand','owl'];
+  let y=fy+fh+36;
+  g.textAlign='left'; g.textBaseline='middle';
+  g.font='bold 13px "Courier New",ui-monospace,monospace';
+  for(const s of order){
+    const on=equipped[s];
+    // box
+    g.fillStyle= on?'#16331f':'#23263a'; g.fillRect(px+22,y-9,18,18);
+    g.strokeStyle= on?'#39d353':'#5a608a'; g.lineWidth=2; g.strokeRect(px+22,y-9,18,18);
+    if(on){ g.strokeStyle='#39d353'; g.lineWidth=3; g.beginPath();
+      g.moveTo(px+26,y); g.lineTo(px+30,y+5); g.lineTo(px+37,y-5); g.stroke(); }
+    g.fillStyle= on?'#e6ffe9':'#c4c8e6';
+    g.fillText(slotMeta[s].short, px+50, y+1);
+    y+=30;
+  }
+  // footer hint
+  g.fillStyle='#aeb3d6'; g.font='bold 11px "Courier New",ui-monospace,monospace'; g.textAlign='center';
+  g.fillText('Collect them all, eh!', px+pw/2, H-20);
+}
+
+//==================================================================
+// SCREENS
+//==================================================================
+function drawTitle(g){
+  g.fillStyle='#0a0b12'; g.fillRect(0,0,W,H);
+  // sky stripes (flag motif)
+  g.fillStyle='#15182a';
+  for(let i=0;i<H;i+=8) g.fillRect(0,i,W,3);
+  // big flag bars
+  g.fillStyle=COL.maple; g.fillRect(60,70,40,H-140); g.fillRect(W-100,70,40,H-140);
+  // leaf
+  bigLeaf(g, W/2, 150, 54, '#e01b24');
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle='#ffffff'; g.font='34px "Press Start 2P",monospace';
+  g.fillText('SUPER', W/2, 250);
+  g.fillStyle='#ffffff';
+  g.fillText('CANADIAN', W/2, 296);
+  g.fillStyle='#cfd6e0'; g.font='10px "Press Start 2P",monospace';
+  g.fillText('A Citizenship Quest', W/2, 344);
+  g.fillStyle='#9aa0bf'; g.font='9px "Press Start 2P",monospace';
+  g.fillText('Roam the Great White North. Enter each shop.', W/2, 392);
+  g.fillText('Loot the gear. Become Super Canadian, eh.', W/2, 414);
+  // blink start
+  if((performance.now()/600|0)%2===0){
+    g.fillStyle=COL.gold; g.font='12px "Press Start 2P",monospace';
+    g.fillText('PRESS SPACE / TAP TO START', W/2, 470);
+  }
+  g.fillStyle='#6b7099'; g.font='8px "Press Start 2P",monospace';
+  g.fillText('Created by Casey Flinn   •   © 2026 Casey Flinn', W/2, 524);
+}
+// maple leaf traced from reference image (normalized, half-height = 1)
+const LEAF_PTS=[[0,-1],[-0.176,-0.659],[-0.363,-0.742],[-0.27,-0.21],[-0.528,-0.423],
+  [-0.607,-0.285],[-0.88,-0.345],[-0.794,-0.064],[-0.914,0.03],[-0.442,0.419],
+  [-0.494,0.599],[-0.026,0.551],[-0.041,1],[0.045,1],[0.03,0.554],[0.498,0.599],
+  [0.446,0.416],[0.914,0.019],[0.798,-0.052],[0.888,-0.345],[0.61,-0.285],
+  [0.532,-0.419],[0.273,-0.21],[0.367,-0.742],[0.18,-0.659]];
+const LEAF_PATH=new Path2D();
+LEAF_PTS.forEach((p,i)=> i ? LEAF_PATH.lineTo(p[0],p[1]) : LEAF_PATH.moveTo(p[0],p[1]));
+LEAF_PATH.closePath();
+function bigLeaf(g,cx,cy,s,color){
+  g.save(); g.translate(cx,cy); g.scale(s,s);
+  g.fillStyle=color; g.fill(LEAF_PATH); g.restore();
+}
+
+const CREDITS_LINES = [
+  {t:'★ SUPER CANADIAN ★', c:COL.gold, sz:18, gap:62},
+  {t:'%NAME% is now fully, officially,', c:'#fff', sz:11, gap:28},
+  {t:'maple-certified CANADIAN.', c:'#fff', sz:11, gap:54},
+  {t:'Congratulations, %NAME%!', c:COL.gold, sz:14, gap:36},
+  {t:'Welcome home to Canada.', c:'#fff', sz:11, gap:58},
+  {t:'Created by Casey Flinn', c:'#cfd6e0', sz:10, gap:26},
+  {t:'© 2026 Casey Flinn', c:'#9aa0bf', sz:9, gap:56},
+  {t:'PRESS R / TAP TO PLAY AGAIN', c:'#9aa0bf', sz:10, gap:40},
+];
+function drawCredits(g){
+  g.fillStyle='#06070d'; g.fillRect(0,0,W,H);
+  // falling leaves
+  leaves.forEach(L=>{ g.save(); g.translate(L.x,L.y); g.rotate(L.rot);
+    bigLeaf(g,0,0,L.s, (L.s>10?COL.maple:'#e1554a')); g.restore(); });
+  // little avatar parade
+  drawAvatar(g, W/2-36, 18, 6, equipped, {glow:true});
+  // scrolling text
+  g.textAlign='center'; g.textBaseline='middle';
+  let y=creditsY;
+  for(const ln of CREDITS_LINES){
+    g.fillStyle=ln.c; g.font=ln.sz+'px "Press Start 2P",monospace';
+    if(y>90 && y<H+20) g.fillText(ln.t.replace(/%NAME%/g, cfg.name), W/2, y);
+    y+=ln.gap;
+  }
+}
+function updateCredits(){
+  creditsY-=0.55;
+  const total=CREDITS_LINES.reduce((a,l)=>a+l.gap,0);
+  const hold=(H-total)/2;
+  if(creditsY < hold) creditsY = hold; // settle, centered
+  leaves.forEach(L=>{ L.y+=L.vy; L.x+=L.vx; L.rot+=L.vr;
+    if(L.y>H+20){ Object.assign(L, spawnLeaf(false)); } });
+}
+
+//==================================================================
+// HUD overlays (during play)
+//==================================================================
+function drawHUD(g){
+  if(enterHint && state===STATE.OVER){
+    g.textAlign='center'; g.textBaseline='middle';
+    const tx=VW/2;
+    g.fillStyle='rgba(0,0,0,.6)'; g.fillRect(tx-150,VH-44,300,26);
+    g.fillStyle=COL.gold; g.font='9px "Press Start 2P",monospace';
+    g.fillText('ENTERING '+enterHint.name+'...', tx, VH-31);
+  }
+  if(toast){
+    const age=performance.now()-toast.t;
+    if(age<2000){
+      const a=age<1700?1:(1-(age-1700)/300);
+      g.globalAlpha=a;
+      const bx=44, by=92, bw=VW-88, bh=42;
+      g.fillStyle='#06070c'; g.fillRect(bx,by,bw,bh);                 // solid background
+      g.strokeStyle=COL.gold; g.lineWidth=3; g.strokeRect(bx,by,bw,bh);
+      g.fillStyle='#ffffff'; g.font='bold 14px "Courier New",ui-monospace,monospace';
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(toast.text, VW/2, by+bh/2+1);
+      g.globalAlpha=1;
+    } else toast=null;
+  }
+}
+
+//==================================================================
+// MAIN LOOP
+//==================================================================
+function drawPlayer(g){
+  // shadow
+  g.fillStyle='rgba(0,0,0,.28)'; g.beginPath();
+  g.ellipse(player.x+player.w/2, player.y+player.h, 14,5,0,0,Math.PI*2); g.fill();
+  const p=3;
+  const ax=player.x+player.w/2-(12*p)/2;
+  const ay=player.y+player.h-(16*p)+2;
+  drawAvatar(g, ax, ay, p, equipped, {bob:player.bob});
+}
+
+//==================================================================
+// ANNEXATION (idle game-over)
+//==================================================================
+function easeOut(x){ return 1-(1-x)*(1-x); }
+function drawFlag(g, cx, topY, s, t, held){
+  const w=20*s, h=12*s, poleH=(held?10:30)*s, sh=h/7;
+  g.fillStyle='#9aa0ad'; g.fillRect(cx, topY, Math.max(2,2*s), poleH+h);   // pole
+  for(let i=0;i<7;i++){ g.fillStyle=(i%2===0)?'#c0202a':'#f4f1ea';
+    g.fillRect(cx+2*s, topY+i*sh, w, sh+0.6); }                            // stripes
+  g.fillStyle='#1f3a8a'; g.fillRect(cx+2*s, topY, w*0.42, sh*4);           // canton
+  g.fillStyle='#fff';
+  for(let r=0;r<2;r++) for(let c=0;c<3;c++)
+    g.fillRect(cx+4*s + c*(w*0.12), topY+2*s + r*(sh*1.6), Math.max(1,1.4*s), Math.max(1,1.4*s));
+}
+function drawAnnexFlags(g){
+  for(const f of plantedFlags){
+    const age=performance.now()-f.t0;
+    const drop=Math.min(age/360,1);
+    const fx=f.b.x+f.b.w/2-10;
+    const targetY=f.b.y-16, startY=-40;
+    const y=startY+(targetY-startY)*easeOut(drop);
+    drawFlag(g, fx, y, 1, performance.now());
+  }
+}
+function drawBaby(g,x,y,t){
+  const o='#e8923c', dia='#f4f1ea', hair='#edc23f';
+  // torso
+  g.fillStyle=o; g.beginPath(); g.ellipse(x,y+8,12,10,0,0,Math.PI*2); g.fill();
+  // diaper
+  g.fillStyle=dia; g.fillRect(x-11,y+10,22,10);
+  g.fillStyle='#dcd8cc'; g.fillRect(x-11,y+18,22,2);
+  // legs
+  g.fillStyle=o; g.fillRect(x-9,y+18,6,8); g.fillRect(x+3,y+18,6,8);
+  // arms (flailing)
+  const aw=Math.sin(t/110)*4;
+  g.fillStyle=o; g.fillRect(x-19,y+1+aw,8,5); g.fillRect(x+11,y-3-aw,8,5);
+  // head
+  g.fillStyle=o; g.beginPath(); g.arc(x,y-12,13,0,Math.PI*2); g.fill();
+  // hair swoop
+  g.fillStyle=hair;
+  g.beginPath(); g.ellipse(x,y-22,12,5,0,0,Math.PI*2); g.fill();
+  g.beginPath(); g.moveTo(x-12,y-23); g.quadraticCurveTo(x+18,y-30,x+9,y-16);
+  g.quadraticCurveTo(x+4,y-20,x-12,y-19); g.closePath(); g.fill();
+  // angry face
+  g.fillStyle='#3a2410'; g.fillRect(x-7,y-14,4,2); g.fillRect(x+3,y-14,4,2);   // eyes
+  g.fillStyle='#2a1a0a'; g.fillRect(x-8,y-16,5,2); g.fillRect(x+3,y-16,5,2);   // brows
+  g.fillStyle='#7a1f1f'; g.beginPath(); g.arc(x,y-4,3.2,Math.PI,0,true); g.fill(); // frown
+  // tiny flag in hand
+  drawFlag(g, x+17, y-6, 0.7, t, true);
+}
+function drawAnnexMessage(g){
+  g.fillStyle='rgba(6,7,13,.84)'; g.fillRect(0,0,W,H);
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle='#c0202a'; g.font='30px "Press Start 2P",monospace';
+  g.fillText('GAME OVER', W/2, H/2-92);
+  g.fillStyle='#ffffff'; g.font='13px "Press Start 2P",monospace';
+  g.fillText('OH NO, YOU TOOK TOO LONG.', W/2, H/2-34);
+  g.fillStyle='#5aa0e0'; g.font='15px "Press Start 2P",monospace';
+  g.fillText('AMERICA ANNEXED', W/2, H/2+14);
+  g.fillText('CANADA!!!', W/2, H/2+42);
+  if((performance.now()/600|0)%2===0){
+    g.fillStyle='#9aa0bf'; g.font='10px "Press Start 2P",monospace';
+    g.fillText('PRESS R / TAP TO TRY AGAIN', W/2, H/2+100);
+  }
+}
+
+function drawOverworld(g){
+  drawGrass(g); drawPaths(g);
+  blockers.forEach(b=>drawBlocker(g,b));
+  // central welcome sign
+  g.fillStyle='#3a2718'; g.fillRect(VW/2-46,300,92,8);
+  g.fillStyle='#1b1d2b'; g.fillRect(VW/2-52,276,104,24);
+  g.fillStyle=COL.gold; g.font='8px "Press Start 2P",monospace';
+  g.textAlign='center'; g.textBaseline='middle'; g.fillText('O CANADA', VW/2,289);
+  buildings.forEach(b=>drawBuildingExt(g,b));
+  drawPlayer(g);
+}
+
+function frame(){
+  // update
+  if(state===STATE.OVER) updateOver();
+  else if(state===STATE.INSIDE) updateInside();
+  else if(state===STATE.CREDITS) updateCredits();
+  else if(state===STATE.ANNEX) updateAnnex();
+
+  // idle -> annexation
+  if((state===STATE.OVER||state===STATE.INSIDE) && performance.now()-lastActivity>30000){
+    triggerAnnex();
+  }
+
+  // draw
+  ctx.fillStyle='#05060a'; ctx.fillRect(0,0,W,H);
+
+  if(state===STATE.TITLE){ drawTitle(ctx); }
+  else if(state===STATE.CONFIG){ ctx.fillStyle='#0a0b14'; ctx.fillRect(0,0,W,H); }
+  else if(state===STATE.CREDITS){ drawCredits(ctx); }
+  else if(state===STATE.ANNEX){
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,VW,VH); ctx.clip();
+    drawOverworld(ctx);
+    drawAnnexFlags(ctx);
+    drawBaby(ctx, babyX, 86 + Math.sin(performance.now()/170)*16, performance.now());
+    ctx.restore();
+    drawPanel(ctx);
+    if(performance.now()-annexT0 > FLY_MS+500) drawAnnexMessage(ctx);
+  }
+  else {
+    // clip viewport
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,VW,VH); ctx.clip();
+    if(state===STATE.OVER){
+      drawOverworld(ctx);
+    } else { // INSIDE
+      drawRoom(ctx,current);
+      drawItemInside(ctx,current);
+      drawPlayer(ctx);
+    }
+    drawHUD(ctx);
+    ctx.restore();
+    // panel
+    drawPanel(ctx);
+  }
+  requestAnimationFrame(frame);
+}
+// ---------- character creator ----------
+const configDiv = document.getElementById('config');
+const previewCv = document.getElementById('preview');
+const pctx = previewCv.getContext('2d'); pctx.imageSmoothingEnabled=false;
+const NO_GEAR = {head:false,chest:false,lhand:false,rhand:false,owl:false};
+function drawPreview(){
+  pctx.clearRect(0,0,previewCv.width,previewCv.height);
+  drawAvatar(pctx, (previewCv.width-12*7)/2, 14, 7, NO_GEAR, {});
+}
+function buildPal(container, key){
+  container.innerHTML='';
+  PALETTE.forEach(hex=>{
+    const d=document.createElement('div');
+    d.className='sw'+(cfg[key]===hex?' sel':''); d.style.background=hex; d.title=hex;
+    d.addEventListener('click',()=>{
+      cfg[key]=hex;
+      [...container.children].forEach(c=>c.classList.remove('sel'));
+      d.classList.add('sel'); drawPreview();
+    });
+    container.appendChild(d);
+  });
+}
+buildPal(document.getElementById('skinPal'),'skin');
+buildPal(document.getElementById('hairPal'),'hair');
+function showConfig(){
+  state=STATE.CONFIG; configDiv.style.display='flex'; drawPreview();
+  setTimeout(()=>document.getElementById('nameIn').focus(), 60);
+}
+function beginGame(){
+  const inEl=document.getElementById('nameIn');
+  cfg.name=inEl.value.trim().toUpperCase().slice(0,10);
+  inEl.blur();
+  configDiv.style.display='none';
+  state=STATE.OVER; ac(); startMusic(); activity(); sfx.door();
+}
+document.getElementById('startBtn').addEventListener('click', beginGame);
+document.getElementById('nameIn').addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); beginGame(); }
+});
+
+// kick off once font is ready-ish
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(()=>{}); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
