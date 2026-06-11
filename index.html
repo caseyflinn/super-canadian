@@ -161,9 +161,62 @@ function playMusicLoop(){
 function startMusic(){ if(musicStarted) return; musicStarted=true; playMusicLoop(); }
 function stopMusic(){ musicStarted=false; if(musicTimer){ clearTimeout(musicTimer); musicTimer=null; } }
 
+// ---------- ominous annexation soundtrack ----------
+const OM_NOTE={E2:82.41,F2:87.31,G2:98.00,Gs2:103.83,A2:110.00,
+  E4:329.63,F4:349.23,Gs4:415.30,A4:440.00,B4:493.88,C5:523.25};
+const OM_BEAT=0.6, OM_LOOPB=16, OM_STEP=OM_BEAT/2;
+const OM_BASS=['A2','A2','A2','A2','A2','A2','A2','A2','A2','A2','A2','A2','Gs2','Gs2','G2','G2',
+  'F2','F2','F2','F2','F2','F2','F2','F2','E2','E2','E2','E2','Gs2','Gs2','Gs2','Gs2'];
+const OM_LEAD=[[0,3,'A4'],[3,1,'C5'],[4,2,'B4'],[6,2,'A4'],[8,2,'F4'],[10,2,'E4'],[12,2,'Gs4'],[14,2,'B4']];
+const OM_DEEP={lp:650,q:9,types:[['sawtooth',1,0.10],['sawtooth',0.5,0.10]],syl:[[0.32,0.16,95],[0.30,0.16,86],[0.36,0.12,76]]};
+const OM_CLASSIC={lp:1300,q:6,types:[['sawtooth',1,0.09],['square',0.5,0.10],['sawtooth',1.005,0.05]],syl:[[0.34,0.06,150],[0.16,0.05,205],[0.16,0.05,182],[0.16,0.05,160],[0.16,0.05,142],[0.42,0.0,120]]};
+let omenOn=false, omenTimer=null, omenNext=0, omenGain=null;
+function omVoice(a,dest,ts,dur,f,type,peak){
+  const o=a.createOscillator(); o.type=type; const g=a.createGain(); const te=ts+dur;
+  o.frequency.setValueAtTime(f,ts);
+  g.gain.setValueAtTime(0.0001,ts); g.gain.exponentialRampToValueAtTime(peak,ts+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,te);
+  o.connect(g).connect(dest); o.start(ts); o.stop(te+0.03);
+}
+function omLaugh(a,dest,cfg,startT){
+  const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=cfg.lp; lp.Q.value=cfg.q; lp.connect(dest);
+  let t=startT;
+  cfg.syl.forEach(s=>{ cfg.types.forEach(ty=>{
+    const o=a.createOscillator(); o.type=ty[0]; const g=a.createGain(); const ff=s[2]*ty[1]; const te=t+s[0];
+    o.frequency.setValueAtTime(ff*1.12,t); o.frequency.exponentialRampToValueAtTime(ff*0.9,te);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(ty[2],t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,te);
+    o.connect(g).connect(lp); o.start(t); o.stop(te+0.03);
+  }); t+=s[0]+s[1]; });
+  return t;
+}
+function omenCycle(a,startAt){
+  const loopDur=OM_LOOPB*OM_BEAT;
+  const d=a.createOscillator(); d.type='sawtooth'; d.frequency.value=55;
+  const dl=a.createBiquadFilter(); dl.type='lowpass'; dl.frequency.value=300;
+  const dg=a.createGain(); dg.gain.value=0.05; d.connect(dg).connect(dl).connect(omenGain);
+  d.start(startAt); d.stop(startAt+loopDur+0.05);
+  const bl=a.createBiquadFilter(); bl.type='lowpass'; bl.frequency.value=900; bl.connect(omenGain);
+  OM_BASS.forEach((n,i)=>{ const ts=startAt+i*OM_STEP;
+    omVoice(a,bl,ts,OM_STEP*0.9,OM_NOTE[n],'square',0.07); omVoice(a,bl,ts,OM_STEP*0.9,OM_NOTE[n]/2,'triangle',0.06); });
+  const ll=a.createBiquadFilter(); ll.type='lowpass'; ll.frequency.value=1600; ll.connect(omenGain);
+  OM_LEAD.forEach(m=>{ omVoice(a,ll,startAt+m[0]*OM_BEAT,m[1]*OM_BEAT*0.95,OM_NOTE[m[2]],'square',0.05); });
+  const after=omLaugh(a,omenGain,OM_DEEP,startAt+0.1); omLaugh(a,omenGain,OM_CLASSIC,after+0.1);
+  return startAt+loopDur;
+}
+function omenTick(){ if(!omenOn) return; const a=ac(); if(!a) return;
+  while(omenNext < a.currentTime+0.9){ omenNext=omenCycle(a,omenNext); }
+  omenTimer=setTimeout(omenTick,250); }
+function startOmen(){ if(omenOn||muted) return; const a=ac(); if(!a) return; omenOn=true;
+  omenGain=a.createGain(); omenGain.gain.value=0.7; omenGain.connect(a.destination);
+  omenNext=a.currentTime+0.06; omenTick(); }
+function stopOmen(){ omenOn=false; if(omenTimer){ clearTimeout(omenTimer); omenTimer=null; }
+  if(omenGain){ const a=ac(); if(a) omenGain.gain.setTargetAtTime(0.0001,a.currentTime,0.08); } }
+
 document.getElementById('mute').addEventListener('click',e=>{
   muted=!muted; e.target.textContent='SOUND: '+(muted?'OFF':'ON');
-  if(muted){ stopMusic(); } else { ac(); if(state!==STATE.TITLE) startMusic(); }
+  if(muted){ stopMusic(); stopOmen(); }
+  else { ac(); if(state===STATE.ANNEX) startOmen(); else if(state!==STATE.TITLE) startMusic(); }
 });
 
 // ---------- game data ----------
@@ -223,13 +276,14 @@ let enterHint = null;
 
 // idle -> annexation
 let lastActivity = performance.now();
+let omenWarning = false;
 let annexT0 = 0, babyX = -90;
 const plantedFlags = [];  // {b, t0}
 const FLY_MS = 3800;      // baby fly-across duration
 function activity(){ lastActivity = performance.now(); }
 function triggerAnnex(){
   state = STATE.ANNEX; annexT0 = performance.now(); babyX = -90;
-  plantedFlags.length = 0; stopMusic(); sfx.bad();
+  plantedFlags.length = 0; stopMusic(); startOmen();
 }
 function updateAnnex(){
   const t = performance.now() - annexT0;
@@ -317,7 +371,7 @@ function restart(){
   for(const k in equipped) equipped[k]=false;
   player.x=300; player.y=474; player.cool=20;
   state=STATE.OVER; current=null; toast=null;
-  plantedFlags.length=0; activity();
+  plantedFlags.length=0; stopOmen(); omenWarning=false; activity();
   if(!muted){ startMusic(); }
 }
 
@@ -990,9 +1044,12 @@ function frame(){
   else if(state===STATE.CREDITS) updateCredits();
   else if(state===STATE.ANNEX) updateAnnex();
 
-  // idle -> annexation
-  if((state===STATE.OVER||state===STATE.INSIDE) && performance.now()-lastActivity>30000){
-    triggerAnnex();
+  // idle -> warning music (25s) -> annexation (30s)
+  if(state===STATE.OVER || state===STATE.INSIDE){
+    const idle = performance.now()-lastActivity;
+    if(idle > 30000){ triggerAnnex(); }
+    else if(idle > 25000 && !omenWarning){ omenWarning=true; stopMusic(); startOmen(); }
+    else if(idle <= 25000 && omenWarning){ omenWarning=false; stopOmen(); if(!muted) startMusic(); }
   }
 
   // draw
