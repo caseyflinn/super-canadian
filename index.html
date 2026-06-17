@@ -6,7 +6,7 @@
 <meta name="author" content="Casey Flinn" />
 <meta name="copyright" content="© 2026 Casey Flinn" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Super Canadian: A Citizenship Quest</title>
+<title>Super Canadian — Sri's Citizenship Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -24,10 +24,10 @@
   #hint{font-size:10px;line-height:1.8;color:#9aa0bf;text-align:center;max-width:920px;}
   #hint b{color:var(--gold);}
   /* on-screen controls for touch */
-  #dpad{position:absolute;left:10px;bottom:10px;display:grid;grid-template-columns:repeat(3,46px);
-    grid-template-rows:repeat(3,46px);gap:4px;opacity:.85;touch-action:none;}
-  #dpad button{font-family:inherit;font-size:14px;color:#fff;background:#2b2f45cc;border:2px solid #454b6e;
-    border-radius:8px;}
+  #dpad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);
+    gap:6px;margin:2px auto 0;opacity:.92;touch-action:none;}
+  #dpad button{font-family:inherit;font-size:16px;color:#fff;background:#2b2f45;border:2px solid #454b6e;
+    border-radius:10px;}
   #dpad button:active{background:#d63b2f;}
   #dpad .sp{visibility:hidden;}
   .up{grid-column:2;grid-row:1;} .lf{grid-column:1;grid-row:2;}
@@ -60,13 +60,6 @@
   <div id="stage">
     <canvas id="c" width="960" height="560"></canvas>
     <button id="mute" aria-label="Toggle sound">SOUND: ON</button>
-    <div id="dpad" aria-hidden="true">
-      <button class="up" data-k="up">▲</button>
-      <button class="lf" data-k="left">◀</button>
-      <button class="sp"></button>
-      <button class="rt" data-k="right">▶</button>
-      <button class="dn" data-k="down">▼</button>
-    </div>
     <div id="config">
       <h2>CREATE YOUR CANADIAN</h2>
       <div class="top">
@@ -82,6 +75,13 @@
       </div>
       <button id="startBtn">START QUEST</button>
     </div>
+  </div>
+  <div id="dpad" aria-hidden="true">
+    <button class="up" data-k="up">▲</button>
+    <button class="lf" data-k="left">◀</button>
+    <button class="sp"></button>
+    <button class="rt" data-k="right">▶</button>
+    <button class="dn" data-k="down">▼</button>
   </div>
   <div id="hint">
     <b>Arrows / WASD</b> to move &nbsp;•&nbsp; walk into a <b>door</b> to enter &nbsp;•&nbsp;
