@@ -6,7 +6,7 @@
 <meta name="author" content="Casey Flinn" />
 <meta name="copyright" content="© 2026 Casey Flinn" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Super Canadian: A Citizenship Quest</title>
+<title>Super Canadian — Sri's Citizenship Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -17,6 +17,7 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
     font-family:'Press Start 2P',ui-monospace,monospace;}
   #wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;}
+  #play{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;}
   #stage{position:relative;width:min(960px,100%);}
   canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;
     border:4px solid #2b2f45;border-radius:6px;background:#05060a;
@@ -33,6 +34,14 @@
   .up{grid-column:2;grid-row:1;} .lf{grid-column:1;grid-row:2;}
   .rt{grid-column:3;grid-row:2;} .dn{grid-column:2;grid-row:3;}
   @media (hover:hover) and (pointer:fine){ #dpad{display:none;} }
+  @media (orientation:landscape) and (pointer:coarse){
+    #wrap{padding:8px;justify-content:center;}
+    #play{flex-direction:row;align-items:center;justify-content:center;gap:12px;}
+    #dpad{order:-1;margin:0;}
+    #stage{width:auto;max-width:calc(100% - 190px);}
+    #c{width:auto;height:auto;max-width:100%;max-height:calc(100svh - 60px);}
+    #hint{display:none;}
+  }
   #mute{position:absolute;left:83.33%;bottom:10.5%;transform:translateX(-50%);
     font-family:inherit;font-size:9px;color:#fff;white-space:nowrap;
     background:#2b2f45cc;border:2px solid #454b6e;border-radius:8px;padding:6px 9px;cursor:pointer;}
@@ -57,6 +66,7 @@
 </head>
 <body>
 <div id="wrap">
+  <div id="play">
   <div id="stage">
     <canvas id="c" width="960" height="560"></canvas>
     <button id="mute" aria-label="Toggle sound">SOUND: ON</button>
@@ -82,6 +92,7 @@
     <button class="sp"></button>
     <button class="rt" data-k="right">▶</button>
     <button class="dn" data-k="down">▼</button>
+  </div>
   </div>
   <div id="hint">
     <b>Arrows / WASD</b> to move &nbsp;•&nbsp; walk into a <b>door</b> to enter &nbsp;•&nbsp;
